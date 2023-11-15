@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "shell.h"
 
 /**
@@ -15,19 +17,16 @@ int main(void)
 	char *line_ptr = NULL;
 	size_t buffer = 0;
 	ssize_t read_input;
-	char *shellname;
-	int status;
-	int is_interactive;
-
-	is_interactive = isatty(STDIN_FILENO);
+	char *token;
+	char *args[100];
+	int arg_count;
+	pid_t wstatus, child_pid;
 
 	while (1)
 	{
-		if (is_interactive)
-			shell_prompt();
+		shell_prompt();
 
 		read_input = getline(&line_ptr, &buffer, stdin);
-
 		if (read_input == -1)
 		{
 			if (feof(stdin))
@@ -40,19 +39,41 @@ int main(void)
 				exit(EXIT_FAILURE);
 			}
 		}
-		shellname = strtok(line_ptr, " \t\n");
-		if (shellname == NULL)
+		token = strtok(line_ptr, " \t\n");
+		arg_count = 0;
+
+		while (token != NULL)
+		{
+			args[arg_count++] = token;
+			token = strtok(NULL, " \t\n");
+		}
+		if (arg_count == 0)
 		{
 			continue;
 		}
-		status = execute_command(shellname);
-		if (status == -1)
+		args[arg_count] = NULL;
+		if (strcmp(args[0], "exit") == 0)
 		{
-			fprintf(stderr, "%s: Error executing command\n", shellname);
+			free(line_ptr);
+			exit(EXIT_SUCCESS);
 		}
-		if (!is_interactive)
-			break;
+		child_pid = fork();
+		if (child_pid == -1)
+		{
+			perror("Error");
+			_exit(EXIT_FAILURE);
+		}
+		if (child_pid == 0)
+		{
+			execvp(args[0], args);
+			fprintf(stderr, "%s: No such file or directory\n", args[0]);
+			_exit(EXIT_FAILURE);
+		}
+		else
+		{
+			wait(&wstatus);
+		}
+		free(line_ptr);
 	}
-	free(line_ptr);
-	exit(EXIT_SUCCESS);
+	_exit(EXIT_SUCCESS);
 }

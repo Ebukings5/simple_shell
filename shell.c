@@ -55,42 +55,29 @@ int execute_command(const char *command)
 	}
 	else
 	{
-		char *path = getenv("PATH");
-		char *token = strtok(path, ":");
-		while (token != NULL)
+		child_pid = fork();
+		if (child_pid == -1)
 		{
-			char command_path[100];
-			snprintf(command_path, sizeof(command_path), "%s/%s", token, command);
-			if (access(command_path, F_OK) == 0)
-			{
-				child_pid = fork();
-				if (child_pid == -1)
-				{
-					perror("fork");
-					return (-1);
-				}
-				else if (child_pid == 0)
-				{
-					execl(command_path, command, (char *)NULL);
-					perror("execl");
-					_exit(EXIT_FAILURE);
-				}
-				else
-				{
-					waitpid(child_pid, &status, 0);
-					if (WIFEXITED(status))
-					{
-						return (WEXITSTATUS(status));
-					}
-					else
-					{
-						return (-1);
-					}
-				}
-			}
-			token = strtok(NULL, ":");
+			perror("fork");
+			return (-1);
 		}
-		fprintf(stderr, "%s: command not found\n", command);
-		return (-1);
+		else if (child_pid == 0)
+		{
+			execlp(command, command, (char *)NULL);
+			fprintf(stderr, "%s: command not found\n", command);
+			_exit(EXIT_FAILURE);
+		}
+		else
+		{
+			waitpid(child_pid, &status, 0);
+			if (WIFEXITED(status))
+			{
+				return (WEXITSTATUS(status));
+			}
+			else
+			{
+				return (-1);
+			}
+		}
 	}
 }
