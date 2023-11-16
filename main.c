@@ -36,6 +36,7 @@ int main(void)
 			else
 			{
 				perror("Error");
+				free(line_ptr);
 				exit(EXIT_FAILURE);
 			}
 		}
