@@ -73,7 +73,7 @@ int main(void)
 		{
 			wait(&wstatus);
 		}
-		free(line_ptr);
 	}
+	free(line_ptr);
 	_exit(EXIT_SUCCESS);
 }
